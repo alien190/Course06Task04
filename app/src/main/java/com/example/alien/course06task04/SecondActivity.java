@@ -39,7 +39,7 @@ public class SecondActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_second);
         initUI(getIntent().getStringExtra(ARTIST_KEY), getIntent().getStringExtra(TITLE_KEY));
-        init(getIntent().getStringExtra(PATH_KEY));
+        initPlayer(getIntent().getStringExtra(PATH_KEY));
     }
 
     private void initUI(String artist, String title) {
@@ -81,7 +81,7 @@ public class SecondActivity extends AppCompatActivity {
         super.onStop();
     }
 
-    private void init(String path) {
+    private void initPlayer(String path) {
         if (path != null && !path.isEmpty()) {
             mMediaPlayer = new MediaPlayer();
             try {
