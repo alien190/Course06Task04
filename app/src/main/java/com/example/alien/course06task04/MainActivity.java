@@ -9,22 +9,34 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SongAdapter.IOnItemClickListener {
 
     private static final int PERMISSION_REQUEST_CODE = 11;
-    private List<String> mSongs;
+    private RecyclerView mRecyclerView;
+    private SongAdapter mSongAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         requestPermissions();
+    }
+
+    private void init() {
+        mRecyclerView = findViewById(R.id.recycler);
+        mSongAdapter = new SongAdapter();
+        mSongAdapter.setOnItemClickListener(this);
+        mRecyclerView.setAdapter(mSongAdapter);
+        mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        loadMusicFileList();
     }
 
     private void loadMusicFileList() {
@@ -46,16 +58,21 @@ public class MainActivity extends AppCompatActivity {
                 selection,
                 null,
                 null);
-
-        mSongs = new ArrayList();
-        while (cursor.moveToNext()) {
-            mSongs.add(cursor.getString(0) + "||" + cursor.getString(1) + "||" + cursor.getString(2) + "||" + cursor.getString(3) + "||" + cursor.getString(4) + "||" + cursor.getString(5));
+        if (cursor != null) {
+            while (cursor.moveToNext()) {
+                mSongAdapter.addItem(new Song(
+                        cursor.getString(1),
+                        cursor.getString(2),
+                        cursor.getString(5),
+                        cursor.getString(3)
+                ));
+            }
         }
     }
 
     private void requestPermissions() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PERMISSION_GRANTED) {
-            loadMusicFileList();
+            init();
         } else {
             new AlertDialog.Builder(this)
                     .setTitle(R.string.permDialogTitle)
@@ -84,6 +101,11 @@ public class MainActivity extends AppCompatActivity {
                         .show();
             }
         }
+    }
+
+    @Override
+    public void onItemClick(Song song) {
+        SecondActivity.start(this, song);
     }
 }
 
