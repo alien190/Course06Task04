@@ -42,6 +42,7 @@ public class PlayerFragment extends Fragment {
     private Disposable mDisposable;
     private SensorManager mSensorManager;
     private Sensor mSensorAcceleration;
+    private Sensor mSensorMagnetic;
     private long mLastUpdate;
     private float mLastX;
     private float mLastY;
@@ -49,6 +50,11 @@ public class PlayerFragment extends Fragment {
     private SongAdapter mSongAdapter;
     private Song mSong;
     private View mView;
+    final float[] mAccelReading = new float[3];
+    final float[] mMagnetReading = new float[3];
+
+    final float[] mRotationMatrix = new float[9];
+    final float[] mOrientationAngles = new float[3];
 
     public static PlayerFragment newInstance(int index) {
         Bundle args = new Bundle();
@@ -92,6 +98,7 @@ public class PlayerFragment extends Fragment {
             mSensorManager = (SensorManager) getActivity().getSystemService(Context.SENSOR_SERVICE);
             mSensorAcceleration =
                     mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            mSensorMagnetic = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         } catch (Throwable throwable) {
             throwable.printStackTrace();
 
@@ -127,6 +134,7 @@ public class PlayerFragment extends Fragment {
         mStopImageButton.setOnClickListener(null);
         mForwardImageButton.setOnClickListener(null);
         mSensorManager.unregisterListener(mSensorListener);
+
     }
 
     @Override
@@ -138,6 +146,7 @@ public class PlayerFragment extends Fragment {
         mStopImageButton.setOnClickListener(this::OnClick);
         mForwardImageButton.setOnClickListener(this::OnClick);
         mSensorManager.registerListener(mSensorListener, mSensorAcceleration, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(mSensorListener, mSensorMagnetic, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     private SensorEventListener mSensorListener = new SensorEventListener() {
@@ -145,36 +154,69 @@ public class PlayerFragment extends Fragment {
         public void onSensorChanged(SensorEvent event) {
             switch (event.sensor.getType()) {
                 case Sensor.TYPE_ACCELEROMETER: {
-                    float x = event.values[0];
-                    float y = event.values[1];
-                    float z = event.values[2];
-
-                    long currentTime = System.currentTimeMillis();
-                    long dt = currentTime - mLastUpdate;
-                    if (dt > 100) {
-                        mLastUpdate = currentTime;
-
-                        float speed = Math.abs(x + y + z - mLastX - mLastY - mLastZ) / dt * 10000;
-                        if (speed > SHAKE_TRESHOLD) {
-                            Toast.makeText(getActivity(), "Shaking!", Toast.LENGTH_SHORT).show();
-                            playRandomSong();
-                        }
-                        mLastX = x;
-                        mLastY = y;
-                        mLastZ = z;
-                    }
+                    accelerometerChanged(event);
+                    calculateOrientation();
+                    break;
+                }
+                case Sensor.TYPE_MAGNETIC_FIELD: {
+                    magneticChanged(event);
+                    calculateOrientation();
                     break;
                 }
                 default: {
                     break;
                 }
             }
+
         }
 
         @Override
         public void onAccuracyChanged(Sensor sensor, int accuracy) {
         }
     };
+
+    private void calculateOrientation() {
+        SensorManager.getRotationMatrix(mRotationMatrix, null, mAccelReading, mMagnetReading);
+        SensorManager.getOrientation(mRotationMatrix, mOrientationAngles);
+        float angleX = (float) (Math.abs(mOrientationAngles[1]) * 180 / 3.1415);
+        float angleY = (float) (Math.abs(mOrientationAngles[2]) * 180 / 3.1415);
+
+        if (angleX < 15) {
+            if (angleY < 15 && mIsPaused) {
+                play();
+            } else if (angleY > 165 && mMediaPlayer.isPlaying()) {
+                pause();
+            }
+        }
+
+    }
+
+    private void magneticChanged(SensorEvent event) {
+        System.arraycopy(event.values, 0, mMagnetReading, 0, mMagnetReading.length);
+    }
+
+    private void accelerometerChanged(SensorEvent event) {
+        float x = event.values[0];
+        float y = event.values[1];
+        float z = event.values[2];
+
+        long currentTime = System.currentTimeMillis();
+        long dt = currentTime - mLastUpdate;
+        if (dt > 100) {
+            mLastUpdate = currentTime;
+
+            float speed = Math.abs(x + y + z - mLastX - mLastY - mLastZ) / dt * 10000;
+            if (speed > SHAKE_TRESHOLD) {
+                Toast.makeText(getActivity(), "Shaking!", Toast.LENGTH_SHORT).show();
+                playRandomSong();
+            }
+            mLastX = x;
+            mLastY = y;
+            mLastZ = z;
+        }
+
+        System.arraycopy(event.values, 0, mAccelReading, 0, mAccelReading.length);
+    }
 
     private void playRandomSong() {
         try {
