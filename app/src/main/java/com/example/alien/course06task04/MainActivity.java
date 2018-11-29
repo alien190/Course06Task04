@@ -32,7 +32,7 @@ public class MainActivity extends AppCompatActivity implements SongAdapter.IOnIt
 
     private void init() {
         mRecyclerView = findViewById(R.id.recycler);
-        mSongAdapter = new SongAdapter();
+        mSongAdapter = ((App) getApplication()).getSongAdapter();
         mSongAdapter.setOnItemClickListener(this);
         mRecyclerView.setAdapter(mSongAdapter);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -105,7 +105,7 @@ public class MainActivity extends AppCompatActivity implements SongAdapter.IOnIt
 
     @Override
     public void onItemClick(Song song) {
-        SecondActivity.start(this, song);
+        SecondActivity.start(this, mSongAdapter.getIndex(song));
     }
 }
 

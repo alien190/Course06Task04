@@ -43,6 +43,18 @@ public class SongAdapter extends RecyclerView.Adapter<SongViewHolder> {
         mOnItemClickListener = onItemClickListener;
     }
 
+    public int getIndex(Song song) {
+        return mItems.indexOf(song);
+    }
+
+    public Song getItem(int index) {
+        if (index >= 0 && index < mItems.size()) {
+            return mItems.get(index);
+        } else {
+            throw new IllegalArgumentException("index out of bounds");
+        }
+    }
+
     public interface IOnItemClickListener {
         void onItemClick(Song song);
     }
